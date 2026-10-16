@@ -20,10 +20,10 @@ import {
 } from "lucide-react";
 
 const broker = {
-  name: "Nikhil Gupta",
-  phone: "7754978529",
-  email: "nikhilgupta83470@gmail.com",
-  whatsapp: "7754978529",
+  name: "Ankur Gupta ",
+  phone: " 9999514787",
+  email: "ascendprorealty@gmail.com",
+  whatsapp: "9999514787",
   experience: "5+ Years",
   speciality: "Rent, Buy & Sell",
   areas: "Lucknow, Gomti Nagar, Indira Nagar, Aliganj and more",
