@@ -217,7 +217,9 @@ export default function PropertyDetailsPage({ app }) {
           )}
         </div>
       </div>
+
       {/* Photos */}
+
       <div className="content-card" style={{ marginTop: 20 }}>
         <h2>
           <ImageIcon size={20} style={{ verticalAlign: "middle" }} /> Property
@@ -226,11 +228,13 @@ export default function PropertyDetailsPage({ app }) {
 
         {photos.length > 0 ? (
           <div
-            className="property-grid"
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: 14,
+              gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+              gap: 16,
+              marginTop: 16,
+              width: "100%",
+              alignItems: "start",
             }}
           >
             {photos.map((src, index) => (
@@ -239,16 +243,20 @@ export default function PropertyDetailsPage({ app }) {
                 href={src}
                 target="_blank"
                 rel="noreferrer"
+                style={{ display: "block", width: "100%" }}
               >
                 <img
                   src={src}
                   alt={`${p.title || "Property"} ${index + 1}`}
                   loading="lazy"
                   style={{
+                    display: "block",
                     width: "100%",
-                    height: 230,
-                    objectFit: "cover",
+                    minWidth: "400px",
+                    height: "280px",
+                    objectFit: "contain",
                     borderRadius: 12,
+                    margin: "0 auto",
                   }}
                 />
               </a>
