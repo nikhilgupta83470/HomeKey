@@ -8,6 +8,8 @@ import PropertiesPage from "./pages/PropertiesPage";
 import LandlordsPage from "./pages/LandlordsPage";
 import ClientsPage from "./pages/ClientsPage";
 import AboutUsPage from "./pages/AboutUsPage";
+
+import AdminResourcePage from "./pages/AdminResourcePage";
 import AboutBrokerPage from "./pages/AboutBrokerPage";
 import RequirementsPage from "./pages/RequirementsPage";
 import PropertyDetailsPage from "./pages/PropertyDetailsPage";
@@ -31,6 +33,12 @@ import {
   X,
   ShieldCheck,
   ArrowRight,
+  ClipboardList,
+  CheckSquare,
+  BriefcaseBusiness,
+  Handshake,
+  Contact,
+  StickyNote,
   Wallet,
 } from "lucide-react";
 
@@ -41,6 +49,7 @@ function App() {
   const [selectedProperty, setSelectedProperty] = useState(null);
 
   const [editPropertyId, setEditPropertyId] = useState(null);
+  const [editLandlordId, setEditLandlordId] = useState(null);
 
   const [authMode, setAuthMode] = useState("login"),
     [authForm, setAuthForm] = useState({
@@ -232,21 +241,47 @@ function App() {
       setError(e.message);
     }
   }
-  async function addLandlord(e) {
-    e.preventDefault();
-    resetMessages();
-    try {
-      await api("/admin/landlords", {
-        method: "POST",
-        body: JSON.stringify(landlordForm),
-      });
-      setLandlordForm({ fullName: "", phone: "", email: "", notes: "" });
-      await loadAdmin();
-      setNotice("Landlord saved.");
-    } catch (e) {
-      setError(e.message);
-    }
+  
+async function addLandlord(e) {
+  e.preventDefault();
+  resetMessages();
+
+  try {
+    const isEditing = Boolean(editLandlordId);
+
+    const path = isEditing
+      ? `/admin/landlords/${editLandlordId}`
+      : "/admin/landlords";
+
+    await api(path, {
+      method: isEditing ? "PATCH" : "POST",
+      body: JSON.stringify(landlordForm),
+    });
+
+    setLandlordForm({
+      fullName: "",
+      phone: "",
+      email: "",
+      alternatePhone: "",
+      address: "",
+      verificationStatus: "",
+      notes: "",
+    });
+
+    setEditLandlordId(null);
+
+    await loadAdmin();
+
+    setNotice(
+      isEditing
+        ? "Landlord updated successfully."
+        : "Landlord saved successfully.",
+    );
+  } catch (e) {
+    setError(e.message);
   }
+}
+
   async function addProperty(e) {
     e.preventDefault();
     resetMessages();
@@ -395,11 +430,13 @@ function App() {
   const admin = user?.role === "ADMIN";
   const nav = admin
     ? [
-        ["profile", "My Profile", Users],
-        ["overview", "Overview", Home],
+       
+        ["overview", "Dashboard", Home],
         ["properties", "Properties", Building2],
-        ["landlords", "Landlords", KeyRound],
-        ["clients", "Clients", Users],
+       
+       
+        ["contacts", "Contacts", Contact],
+       
       ]
     : user
       ? [
@@ -473,6 +510,7 @@ function App() {
     authMode,
     setAuthMode,
     authForm,
+    
     selectedProperty,
     setSelectedProperty,
     setAuthForm,
@@ -497,6 +535,8 @@ function App() {
     landlordForm,
     setLandlordForm,
     propertyForm,
+    editLandlordId,
+    setEditLandlordId,
     setPropertyForm,
     photos,
     setPhotos,
@@ -535,6 +575,17 @@ function App() {
         {view === "property-details" && <PropertyDetailsPage app={pageProps} />}
         {view === "landlords" && admin && <LandlordsPage app={pageProps} />}
         {view === "about-us" && <AboutUsPage />}
+        {admin &&
+          [
+            "inquiries",
+            "tasks",
+            "projects",
+            "deals",
+            "contacts",
+            "notes",
+          ].includes(view) && (
+            <AdminResourcePage key={view} app={pageProps} resource={view} />
+          )}
         {view === "about-broker" && <AboutBrokerPage />}
         {view === "clients" && admin && <ClientsPage app={pageProps} />}
         {view === "requirements" && user && (

@@ -10,6 +10,13 @@ import {
   MapPin,
   BriefcaseBusiness,
   ShieldCheck,
+  Users,
+  KeyRound,
+  LayoutDashboard,
+  ClipboardList,
+  CheckSquare,
+  Handshake,
+  ArrowUpRight,
 } from "lucide-react";
 
 const blankCompany = {
@@ -102,234 +109,302 @@ export default function ProfilePage({ app }) {
     </label>
   );
 
-  return (
-    <section className="profile-page">
-      <div className="profile-page-heading">
-        <div>
-          <span className="eyebrow">ACCOUNT SETTINGS</span>
-          <h1>My Profile</h1>
-          <p>Manage your personal information and company presence.</p>
-        </div>
-        <img
-          src="/assets/ascend-logo.jpg"
-          alt="Ascend Pro Realty logo"
-          className="profile-brand-logo"
-        />
+ 
+return (
+  <section className="profile-page">
+    <div className="profile-page-heading">
+      <div>
+        <span className="eyebrow">
+          {user?.role === "ADMIN" ? "ADMIN ACCOUNT" : "ACCOUNT SETTINGS"}
+        </span>
+        <h1>{user?.role === "ADMIN" ? "Admin Profile" : "My Profile"}</h1>
+        <p>
+          {user?.role === "ADMIN"
+            ? "Manage your business and account from one place."
+            : "Manage your personal information and company presence."}
+        </p>
       </div>
-      <div className="profile-grid">
-        <section className="profile-card personal-card">
-          <div className="profile-card-heading">
-            <h2>Personal Details</h2>
-            {editingPersonal ? (
-              <div className="profile-actions">
-                <button
-                  className="profile-icon-btn"
-                  aria-label="Cancel edit"
-                  onClick={() => setEditingPersonal(false)}
-                >
-                  <X size={19} />
-                </button>
-                <button
-                  className="profile-icon-btn"
-                  aria-label="Save personal details"
-                  onClick={savePersonal}
-                >
-                  <Save size={19} />
-                </button>
-              </div>
-            ) : (
-              <button
-                className="profile-icon-btn"
-                aria-label="Edit personal details"
-                onClick={() => setEditingPersonal(true)}
-              >
-                <Pencil size={19} />
-              </button>
-            )}
-          </div>
-          <div className="profile-person-summary">
-            <div className="profile-avatar">
-              <UserRound size={42} />
-            </div>
-            <div>
-              <h3>{personal.name || "Your Name"}</h3>
-              <p>
-                <b>Username:</b> {personal.username || "Add username"}
-              </p>
-            </div>
-          </div>
-          <div className="profile-detail-panel">
-            {field(
-              "Mobile",
-              "phone",
-              personal.phone,
-              setPersonal,
-              editingPersonal,
-              "tel",
-            )}
-            {field(
-              "Email",
-              "email",
-              personal.email,
-              setPersonal,
-              editingPersonal,
-              "email",
-            )}
-            {field(
-              "User Type",
-              "userType",
-              personal.userType,
-              setPersonal,
-              false,
-            )}
-            {field("User ID", "userId", personal.userId, setPersonal, false)}
-            {field(
-              "Account ID",
-              "accountId",
-              personal.accountId,
-              setPersonal,
-              false,
-            )}
-          </div>
-          <div className="profile-security-note">
-            <ShieldCheck size={17} />
-            <span>
-              Login credentials and account identity are securely managed by the
-              server.
-            </span>
-          </div>
-        </section>
-        <section className="profile-card company-card">
-          <div className="profile-card-heading">
-            <h2>Company Details</h2>
-            {editingCompany ? (
-              <div className="profile-actions">
-                <button
-                  className="profile-icon-btn"
-                  aria-label="Cancel company edit"
-                  onClick={() => setEditingCompany(false)}
-                >
-                  <X size={19} />
-                </button>
-                <button
-                  className="profile-icon-btn"
-                  aria-label="Save company details"
-                  onClick={saveCompany}
-                >
-                  <Save size={19} />
-                </button>
-              </div>
-            ) : (
-              <button
-                className="profile-icon-btn"
-                aria-label="Edit company details"
-                onClick={() => setEditingCompany(true)}
-              >
-                <Pencil size={19} />
-              </button>
-            )}
-          </div>
-          <div className="profile-person-summary">
-            <img
-              src="/assets/ascend-logo.jpg"
-              alt="Ascend Pro Realty logo"
-              className="profile-brand-logo"
-            />
+      <img
+        src="/assets/ascend-logo.jpg"
+        alt="Ascend Pro Realty logo"
+        className="profile-brand-logo"
+      />
+    </div>
 
-            <div>
-              <h3>{company.companyName || "Your Company"}</h3>
-              <p>{company.designation || "Company role"}</p>
+    {/* ADMIN DASHBOARD CARDS */}
+    {user?.role === "ADMIN" && (
+      <section style={{ marginBottom: "28px" }}>
+        <span className="eyebrow">ADMIN WORKSPACE</span>
+        <h2 style={{ margin: "8px 0 17px", fontSize: "23px" }}>
+          Manage Your Business
+        </h2>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+            gap: "16px",
+          }}
+        >
+          {[
+            {
+              title: "Overview",
+              description: "Business statistics and summary",
+              icon: LayoutDashboard,
+              view: "overview",
+              color: "#3977df",
+              background: "#edf4ff",
+            },
+            {
+              title: "Properties",
+              description: "Manage flats and availability",
+              icon: Building2,
+              view: "properties",
+              color: "#168c75",
+              background: "#e8f8f3",
+            },
+            {
+              title: "Landlords",
+              description: "Manage property owners",
+              icon: KeyRound,
+              view: "landlords",
+              color: "#9b68ce",
+              background: "#f5edff",
+            },
+            {
+              title: "Clients",
+              description: "View registered clients",
+              icon: Users,
+              view: "clients",
+              color: "#d35f72",
+              background: "#fff0f2",
+            },
+            {
+              title: "Inquiries",
+              description: "Track client enquiries",
+              icon: ClipboardList,
+              view: "inquiries",
+              color: "#3977df",
+              background: "#edf4ff",
+            },
+            {
+              title: "Tasks",
+              description: "Manage pending work",
+              icon: CheckSquare,
+              view: "tasks",
+              color: "#d58a27",
+              background: "#fff5e5",
+            },
+            {
+              title: "Projects",
+              description: "Track business projects",
+              icon: BriefcaseBusiness,
+              view: "projects",
+              color: "#168c75",
+              background: "#e8f8f3",
+            },
+            {
+              title: "Deals",
+              description: "Manage rental and sale deals",
+              icon: Handshake,
+              view: "deals",
+              color: "#9b68ce",
+              background: "#f5edff",
+            },
+          ].map((item) => {
+            const Icon = item.icon;
+
+            return (
+              <button
+                key={item.view}
+                type="button"
+                onClick={() => app.go(item.view)}
+                style={{
+                  textAlign: "left",
+                  border: "1px solid #e8eaed",
+                  borderRadius: "16px",
+                  background: "#fff",
+                  padding: "20px",
+                  cursor: "pointer",
+                  color: "#20272c",
+                  boxShadow: "0 4px 18px rgba(0,0,0,0.025)",
+                  transition: "transform 0.2s ease, box-shadow 0.2s ease",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: "10px",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "44px",
+                      height: "44px",
+                      display: "grid",
+                      placeItems: "center",
+                      borderRadius: "13px",
+                      background: item.background,
+                      color: item.color,
+                    }}
+                  >
+                    <Icon size={22} />
+                  </div>
+                  <ArrowUpRight size={18} color="#a0a7ac" />
+                </div>
+
+                <h3 style={{ margin: "18px 0 6px", fontSize: "17px" }}>
+                  {item.title}
+                </h3>
+                <p
+                  style={{
+                    margin: 0,
+                    color: "#7a8388",
+                    fontSize: "13px",
+                    lineHeight: 1.6,
+                  }}
+                >
+                  {item.description}
+                </p>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+    )}
+
+    {/* EXISTING PERSONAL AND COMPANY DETAILS */}
+    <div className="profile-grid">
+      <section className="profile-card personal-card">
+        <div className="profile-card-heading">
+          <h2>Personal Details</h2>
+          {editingPersonal ? (
+            <div className="profile-actions">
+              <button
+                className="profile-icon-btn"
+                aria-label="Cancel edit"
+                onClick={() => setEditingPersonal(false)}
+              >
+                <X size={19} />
+              </button>
+              <button
+                className="profile-icon-btn"
+                aria-label="Save personal details"
+                onClick={savePersonal}
+              >
+                <Save size={19} />
+              </button>
             </div>
-          </div>
-          <div className="profile-detail-panel company-detail-panel">
-            {field(
-              "Company Name",
-              "companyName",
-              company.companyName,
-              setCompany,
-              editingCompany,
-            )}
-            {field(
-              "Designation",
-              "designation",
-              company.designation,
-              setCompany,
-              editingCompany,
-            )}
-            {field(
-              "Address",
-              "address",
-              company.address,
-              setCompany,
-              editingCompany,
-            )}
-            {field(
-              "Pincode",
-              "pincode",
-              company.pincode,
-              setCompany,
-              editingCompany,
-            )}
-            {field(
-              "Country",
-              "country",
-              company.country,
-              setCompany,
-              editingCompany,
-            )}
-            {field("City", "city", company.city, setCompany, editingCompany)}
-            {field("State", "state", company.state, setCompany, editingCompany)}
-            {field(
-              "Notification Email",
-              "notificationEmail",
-              company.notificationEmail,
-              setCompany,
-              editingCompany,
-              "email",
-            )}
-            {field(
-              "Website",
-              "website",
-              company.website,
-              setCompany,
-              editingCompany,
-              "url",
-            )}
-            {field(
-              "Instagram",
-              "instagram",
-              company.instagram,
-              setCompany,
-              editingCompany,
-              "url",
-            )}
-            {field(
-              "Facebook",
-              "facebook",
-              company.facebook,
-              setCompany,
-              editingCompany,
-              "url",
-            )}
-            {field(
-              "YouTube",
-              "youtube",
-              company.youtube,
-              setCompany,
-              editingCompany,
-              "url",
-            )}
-          </div>
-          {editingCompany && (
+          ) : (
             <button
-              className="btn btn-dark profile-save-button"
-              onClick={saveCompany}
+              className="profile-icon-btn"
+              aria-label="Edit personal details"
+              onClick={() => setEditingPersonal(true)}
             >
-              <Save size={16} /> Save Company Details
+              <Pencil size={19} />
             </button>
           )}
-        </section>
-      </div>
-    </section>
-  );
+        </div>
+
+        <div className="profile-person-summary">
+          <div className="profile-avatar">
+            <UserRound size={42} />
+          </div>
+          <div>
+            <h3>{personal.name || "Your Name"}</h3>
+            <p>
+              <b>Username:</b> {personal.username || "Add username"}
+            </p>
+          </div>
+        </div>
+
+        <div className="profile-detail-panel">
+          {field("Mobile", "phone", personal.phone, setPersonal, editingPersonal, "tel")}
+          {field("Email", "email", personal.email, setPersonal, editingPersonal, "email")}
+          {field("User Type", "userType", personal.userType, setPersonal, false)}
+          {field("User ID", "userId", personal.userId, setPersonal, false)}
+          {field("Account ID", "accountId", personal.accountId, setPersonal, false)}
+        </div>
+
+        <div className="profile-security-note">
+          <ShieldCheck size={17} />
+          <span>
+            Login credentials and account identity are securely managed by the server.
+          </span>
+        </div>
+      </section>
+
+      <section className="profile-card company-card">
+        <div className="profile-card-heading">
+          <h2>Company Details</h2>
+          {editingCompany ? (
+            <div className="profile-actions">
+              <button
+                className="profile-icon-btn"
+                aria-label="Cancel company edit"
+                onClick={() => setEditingCompany(false)}
+              >
+                <X size={19} />
+              </button>
+              <button
+                className="profile-icon-btn"
+                aria-label="Save company details"
+                onClick={saveCompany}
+              >
+                <Save size={19} />
+              </button>
+            </div>
+          ) : (
+            <button
+              className="profile-icon-btn"
+              aria-label="Edit company details"
+              onClick={() => setEditingCompany(true)}
+            >
+              <Pencil size={19} />
+            </button>
+          )}
+        </div>
+
+        <div className="profile-person-summary">
+          <img
+            src="/assets/ascend-logo.jpg"
+            alt="Ascend Pro Realty logo"
+            className="profile-brand-logo"
+          />
+          <div>
+            <h3>{company.companyName || "Your Company"}</h3>
+            <p>{company.designation || "Company role"}</p>
+          </div>
+        </div>
+
+        <div className="profile-detail-panel company-detail-panel">
+          {field("Company Name", "companyName", company.companyName, setCompany, editingCompany)}
+          {field("Designation", "designation", company.designation, setCompany, editingCompany)}
+          {field("Address", "address", company.address, setCompany, editingCompany)}
+          {field("Pincode", "pincode", company.pincode, setCompany, editingCompany)}
+          {field("Country", "country", company.country, setCompany, editingCompany)}
+          {field("City", "city", company.city, setCompany, editingCompany)}
+          {field("State", "state", company.state, setCompany, editingCompany)}
+          {field("Notification Email", "notificationEmail", company.notificationEmail, setCompany, editingCompany, "email")}
+          {field("Website", "website", company.website, setCompany, editingCompany, "url")}
+          {field("Instagram", "instagram", company.instagram, setCompany, editingCompany, "url")}
+          {field("Facebook", "facebook", company.facebook, setCompany, editingCompany, "url")}
+          {field("YouTube", "youtube", company.youtube, setCompany, editingCompany, "url")}
+        </div>
+
+        {editingCompany && (
+          <button
+            className="btn btn-dark profile-save-button"
+            onClick={saveCompany}
+          >
+            <Save size={16} /> Save Company Details
+          </button>
+        )}
+      </section>
+    </div>
+  </section>
+);
+
 }

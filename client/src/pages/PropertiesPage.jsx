@@ -510,115 +510,7 @@ export default function PropertiesPage({ app }) {
           marginTop: "24px",
         }}
       ></div>
-      <aside
-        className="content-card property-filter-sidebar"
-        style={{
-          padding: "20px",
-          marginBottom: 24,
-        }}
-      >
-        <div className="section-title">
-          <div>
-            <span className="eyebrow">PROPERTY FILTERS</span>
-            <h2>Find your home</h2>
-          </div>
-        </div>
-
-        <div style={{ display: "grid", gap: 14 }}>
-          <Field
-            label="Listing purpose"
-            name="purposeFilter"
-            value={filters.purpose}
-            onChange={(e) => updateFilter("purpose", e.target.value)}
-            options={["Any purpose", "Rent", "Buy"]}
-          />
-
-          <Field
-            label="Location"
-            name="locationFilter"
-            value={filters.location}
-            onChange={(e) => updateFilter("location", e.target.value)}
-            placeholder="City, sector or area"
-          />
-
-          <Field
-            label="Minimum budget (₹)"
-            name="minBudgetFilter"
-            type="number"
-            min="0"
-            value={filters.minBudget}
-            onChange={(e) => updateFilter("minBudget", e.target.value)}
-            placeholder="Minimum price"
-          />
-
-          <Field
-            label="Maximum budget (₹)"
-            name="maxBudgetFilter"
-            type="number"
-            min="0"
-            value={filters.maxBudget}
-            onChange={(e) => updateFilter("maxBudget", e.target.value)}
-            placeholder="Maximum price"
-          />
-
-          <Field
-            label="BHK"
-            name="bhkFilter"
-            value={filters.bhk}
-            onChange={(e) => updateFilter("bhk", e.target.value)}
-            options={["Any BHK", "1 BHK", "2 BHK", "3 BHK", "4+ BHK", "Studio"]}
-          />
-
-          <Field
-            label="Furnishing"
-            name="furnishedFilter"
-            value={filters.furnished}
-            onChange={(e) => updateFilter("furnished", e.target.value)}
-            options={["Any", "Furnished", "Semi-furnished", "Unfurnished"]}
-          />
-
-          <Field
-            label="Property type"
-            name="kindFilter"
-            value={filters.kind}
-            onChange={(e) => updateFilter("kind", e.target.value)}
-            options={["Any type", "Flat", "House", "PG", "Other"]}
-          />
-
-          <Field
-            label="Rental category"
-            name="categoryFilter"
-            value={filters.rentalCategory}
-            onChange={(e) => updateFilter("rentalCategory", e.target.value)}
-            options={["Any category", "Family", "Student"]}
-          />
-
-          <Field
-            label="Minimum bathrooms"
-            name="bathroomsFilter"
-            value={filters.bathrooms}
-            onChange={(e) => updateFilter("bathrooms", e.target.value)}
-            options={["Any", "1", "2", "3", "4"]}
-          />
-
-          <Field
-            label="Sort by"
-            name="sortFilter"
-            value={filters.sortBy}
-            onChange={(e) => updateFilter("sortBy", e.target.value)}
-            options={["newest", "price-low", "price-high", "title"]}
-          />
-        </div>
-
-        <button
-          type="button"
-          className="btn btn-light full"
-          style={{ marginTop: 16 }}
-          onClick={resetFilters}
-        >
-          Reset filters
-        </button>
-      </aside>
+    
       <section className="property-results" style={{ minWidth: 0 }}></section>
       <>
         {/* Page heading */}
@@ -1133,25 +1025,40 @@ export default function PropertiesPage({ app }) {
               }
             />
             <div className="space-y-1">
-              <label className="block text-sm font-medium">Landlord</label>
+              <label
+                htmlFor="property-landlord"
+                className="block text-sm font-medium"
+              >
+                Select Landlord *
+              </label>
+
               <select
+                id="property-landlord"
                 name="landlord"
-                value={propertyForm.landlord}
+                value={propertyForm.landlord || ""}
                 onChange={(e) =>
-                  setPropertyForm({
-                    ...propertyForm,
+                  setPropertyForm((prev) => ({
+                    ...prev,
                     landlord: e.target.value,
-                  })
+                  }))
                 }
+                required
                 className="w-full rounded-lg border border-gray-300 px-3 py-2"
               >
-                <option value="">No landlord selected</option>
-                {landlords.map((l) => (
-                  <option key={l._id} value={l._id}>
-                    {l.fullName}
+                <option value="">Select a landlord</option>
+
+                {landlords.map((landlord) => (
+                  <option key={landlord._id} value={landlord._id}>
+                    {landlord.fullName} — {landlord.phone}
                   </option>
                 ))}
               </select>
+
+              {landlords.length === 0 && (
+                <p className="text-sm text-amber-600">
+                  No landlords found. Add a landlord first.
+                </p>
+              )}
             </div>
             <label className="field">
               <span>Property photos (up to 8)</span>

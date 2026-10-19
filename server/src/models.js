@@ -176,3 +176,169 @@ export const ClientRequest = mongoose.model(
   "ClientRequest",
   clientRequestSchema,
 );
+
+// =====================================================
+// ADMIN DASHBOARD MODELS
+// =====================================================
+
+// Inquiry: client/property enquiry and follow-up tracking
+const inquirySchema = new mongoose.Schema(
+  {
+    client: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    property: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Property",
+      default: null,
+    },
+    name: { type: String, required: true, trim: true },
+    phone: { type: String, default: "" },
+    email: { type: String, default: "" },
+    message: { type: String, default: "" },
+    source: {
+      type: String,
+      enum: ["Website", "Phone", "WhatsApp", "Referral", "Other"],
+      default: "Website",
+    },
+    status: {
+      type: String,
+      enum: ["New", "Contacted", "Follow-up", "Converted", "Closed"],
+      default: "New",
+    },
+    followUpDate: { type: Date, default: null },
+    notes: { type: String, default: "" },
+  },
+  { timestamps: true },
+);
+
+// Task: reminders and daily work
+const taskSchema = new mongoose.Schema(
+  {
+    title: { type: String, required: true, trim: true },
+    description: { type: String, default: "" },
+    dueDate: { type: Date, default: null },
+    priority: {
+      type: String,
+      enum: ["Low", "Medium", "High"],
+      default: "Medium",
+    },
+    status: {
+      type: String,
+      enum: ["Pending", "In Progress", "Completed"],
+      default: "Pending",
+    },
+    assignedTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    relatedProperty: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Property",
+      default: null,
+    },
+    relatedClient: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+  },
+  { timestamps: true },
+);
+
+// Project: a group of properties or a property development
+const projectSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true, trim: true },
+    description: { type: String, default: "" },
+    location: { type: String, default: "" },
+    status: {
+      type: String,
+      enum: ["Planning", "Active", "Completed", "On Hold"],
+      default: "Planning",
+    },
+    startDate: { type: Date, default: null },
+    endDate: { type: Date, default: null },
+    properties: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Property",
+      },
+    ],
+  },
+  { timestamps: true },
+);
+
+// Deal: rental, sale or booking progress
+const dealSchema = new mongoose.Schema(
+  {
+    title: { type: String, required: true, trim: true },
+    client: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    property: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Property",
+      default: null,
+    },
+    landlord: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Landlord",
+      default: null,
+    },
+    amount: { type: Number, min: 0, default: 0 },
+    dealType: {
+      type: String,
+      enum: ["Rent", "Sale", "Booking", "Other"],
+      default: "Rent",
+    },
+    status: {
+      type: String,
+      enum: ["Lead", "Negotiation", "Agreement", "Completed", "Cancelled"],
+      default: "Lead",
+    },
+    expectedCloseDate: { type: Date, default: null },
+    notes: { type: String, default: "" },
+  },
+  { timestamps: true },
+);
+
+// Contact: additional people and business contacts
+const contactSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true, trim: true },
+    phone: { type: String, default: "" },
+    email: { type: String, default: "" },
+    company: { type: String, default: "" },
+    contactType: {
+      type: String,
+      enum: ["Client", "Landlord", "Agent", "Vendor", "Other"],
+      default: "Other",
+    },
+    notes: { type: String, default: "" },
+  },
+  { timestamps: true },
+);
+
+// Notes: admin's saved notes and reminders
+const noteSchema = new mongoose.Schema(
+  {
+    title: { type: String, required: true, trim: true },
+    content: { type: String, default: "" },
+    pinned: { type: Boolean, default: false },
+  },
+  { timestamps: true },
+);
+
+// Export all new models
+export const Inquiry = mongoose.model("Inquiry", inquirySchema);
+export const Task = mongoose.model("Task", taskSchema);
+export const Project = mongoose.model("Project", projectSchema);
+export const Deal = mongoose.model("Deal", dealSchema);
+export const Contact = mongoose.model("Contact", contactSchema);
+export const AdminNote = mongoose.model("AdminNote", noteSchema);

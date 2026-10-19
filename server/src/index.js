@@ -10,7 +10,19 @@ import path from "path";
 import fs from "fs";
 import Razorpay from "razorpay";
 
-import { User, Landlord, Property, ClientRequest } from "./models.js";
+import {
+  User,
+  Landlord,
+  Property,
+  ClientRequest,
+  Inquiry,
+  Task,
+  Project,
+  Deal,
+  Contact,
+  AdminNote,
+} from "./models.js";
+
 import { auth, adminOnly } from "./middleware.js";
 import { notifyAdmin } from "./notify.js";
 
@@ -466,9 +478,55 @@ app.get("/api/admin/clients", auth, adminOnly, async (_req, res) => {
 });
 
 // Admin landlords
+
 app.get("/api/admin/landlords", auth, adminOnly, async (_req, res) => {
   try {
-    res.json(await Landlord.find().sort({ createdAt: -1 }));
+    const landlords = await Landlord.find().sort({ createdAt: -1 }).lean();
+
+    const counts = await Property.aggregate([
+      {
+        $match: {
+          landlord: { $ne: null },
+        },
+      },
+      {
+        $group: {
+          _id: "$landlord",
+          totalProperties: { $sum: 1 },
+          availableProperties: {
+            $sum: {
+              $cond: [{ $eq: ["$status", "Available"] }, 1, 0],
+            },
+          },
+          occupiedProperties: {
+            $sum: {
+              $cond: [{ $eq: ["$status", "Rented"] }, 1, 0],
+            },
+          },
+          reservedProperties: {
+            $sum: {
+              $cond: [{ $eq: ["$status", "Reserved"] }, 1, 0],
+            },
+          },
+        },
+      },
+    ]);
+
+    const countMap = new Map(counts.map((item) => [String(item._id), item]));
+
+    const result = landlords.map((landlord) => {
+      const stats = countMap.get(String(landlord._id));
+
+      return {
+        ...landlord,
+        totalProperties: stats?.totalProperties || 0,
+        availableProperties: stats?.availableProperties || 0,
+        occupiedProperties: stats?.occupiedProperties || 0,
+        reservedProperties: stats?.reservedProperties || 0,
+      };
+    });
+
+    res.json(result);
   } catch (error) {
     console.error("Landlords fetch failed:", error);
 
@@ -478,25 +536,128 @@ app.get("/api/admin/landlords", auth, adminOnly, async (_req, res) => {
   }
 });
 
-app.post("/api/admin/landlords", auth, adminOnly, async (req, res) => {
+
+// Update landlord
+app.patch("/api/admin/landlords/:id", auth, adminOnly, async (req, res) => {
   try {
-    const row = await Landlord.create({
-      fullName: req.body.fullName,
-      phone: req.body.phone,
-      email: req.body.email,
-      notes: req.body.notes,
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({
+        message: "Invalid landlord ID.",
+      });
+    }
+
+    const allowedFields = [
+      "fullName",
+      "phone",
+      "email",
+      "alternatePhone",
+      "address",
+      "verificationStatus",
+      "notes",
+    ];
+
+    const update = {};
+
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        update[field] = req.body[field];
+      }
+    }
+
+    if (Object.keys(update).length === 0) {
+      return res.status(400).json({
+        message: "No valid fields provided.",
+      });
+    }
+
+    if (
+      update.fullName !== undefined &&
+      !String(update.fullName).trim()
+    ) {
+      return res.status(400).json({
+        message: "Landlord name is required.",
+      });
+    }
+
+    if (update.phone !== undefined && !String(update.phone).trim()) {
+      return res.status(400).json({
+        message: "Landlord phone is required.",
+      });
+    }
+
+    if (update.fullName !== undefined) {
+      update.fullName = String(update.fullName).trim();
+    }
+
+    if (update.phone !== undefined) {
+      update.phone = String(update.phone).trim();
+    }
+
+    if (update.email !== undefined) {
+      update.email = String(update.email).trim();
+    }
+
+    const landlord = await Landlord.findByIdAndUpdate(
+      req.params.id,
+      { $set: update },
+      { new: true, runValidators: true }
+    );
+
+    if (!landlord) {
+      return res.status(404).json({
+        message: "Landlord not found.",
+      });
+    }
+
+    return res.json({
+      message: "Landlord updated successfully.",
+      landlord,
     });
-
-    res.status(201).json(row);
   } catch (error) {
-    console.error("Landlord creation failed:", error);
+    console.error("Landlord update failed:", error);
 
-    res.status(500).json({
-      message: "Could not create landlord.",
+    return res.status(500).json({
+      message: "Could not update landlord.",
     });
   }
 });
+// Get one landlord with all their properties
+app.get("/api/admin/landlords/:id", auth, adminOnly, async (req, res) => {
+  try {
+    const { id } = req.params;
 
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({
+        message: "Invalid landlord ID.",
+      });
+    }
+
+    const landlord = await Landlord.findById(id).lean();
+
+    if (!landlord) {
+      return res.status(404).json({
+        message: "Landlord not found.",
+      });
+    }
+
+    const properties = await Property.find({
+      landlord: landlord._id,
+    })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.status(200).json({
+      landlord,
+      properties,
+    });
+  } catch (error) {
+    console.error("Landlord details error:", error);
+
+    return res.status(500).json({
+      message: error.message || "Could not load landlord details.",
+    });
+  }
+});
 // Admin properties
 app.get("/api/admin/properties", auth, adminOnly, async (_req, res) => {
   try {
@@ -845,6 +1006,214 @@ app.delete("/api/admin/properties/:id", auth, adminOnly, async (req, res) => {
     });
   }
 });
+
+/* =====================================================
+   ADMIN DASHBOARD: INQUIRIES, TASKS, PROJECTS,
+   DEALS, CONTACTS AND NOTES
+===================================================== */
+
+const adminResources = {
+  inquiries: {
+    Model: Inquiry,
+    fields: [
+      "client", "property", "name", "phone", "email",
+      "message", "source", "status", "followUpDate", "notes",
+    ],
+    required: ["name"],
+  },
+  tasks: {
+    Model: Task,
+    fields: [
+      "title", "description", "dueDate", "priority", "status",
+      "assignedTo", "relatedProperty", "relatedClient",
+    ],
+    required: ["title"],
+  },
+  projects: {
+    Model: Project,
+    fields: [
+      "name", "description", "location", "status",
+      "startDate", "endDate", "properties",
+    ],
+    required: ["name"],
+  },
+  deals: {
+    Model: Deal,
+    fields: [
+      "title", "client", "property", "landlord", "amount",
+      "dealType", "status", "expectedCloseDate", "notes",
+    ],
+    required: ["title"],
+  },
+  contacts: {
+    Model: Contact,
+    fields: [
+      "name", "phone", "email", "company", "contactType", "notes",
+    ],
+    required: ["name"],
+  },
+  notes: {
+    Model: AdminNote,
+    fields: ["title", "content", "pinned"],
+    required: ["title"],
+  },
+};
+
+function pickAllowedFields(body, fields) {
+  const result = {};
+
+  for (const field of fields) {
+    if (body[field] !== undefined) {
+      result[field] = body[field];
+    }
+  }
+
+  return result;
+}
+
+for (const [resource, config] of Object.entries(adminResources)) {
+  const { Model, fields, required } = config;
+  const route = `/api/admin/${resource}`;
+
+  // GET: all records
+  app.get(route, auth, adminOnly, async (_req, res) => {
+    try {
+      const rows = await Model.find()
+        .sort({ createdAt: -1 })
+        .lean();
+
+      return res.json(rows);
+    } catch (error) {
+      console.error(`Fetch ${resource} failed:`, error);
+
+      return res.status(500).json({
+        message: `Could not load ${resource}.`,
+      });
+    }
+  });
+
+  // POST: create record
+  app.post(route, auth, adminOnly, async (req, res) => {
+    try {
+      const data = pickAllowedFields(req.body, fields);
+
+      for (const field of required) {
+        if (
+          data[field] === undefined ||
+          data[field] === null ||
+          String(data[field]).trim() === ""
+        ) {
+          return res.status(400).json({
+            message: `${field} is required.`,
+          });
+        }
+      }
+
+      const row = await Model.create(data);
+
+      return res.status(201).json(row);
+    } catch (error) {
+      console.error(`Create ${resource} failed:`, error);
+
+      if (error.name === "ValidationError" || error.name === "CastError") {
+        return res.status(400).json({
+          message: error.message,
+        });
+      }
+
+      return res.status(500).json({
+        message: `Could not create ${resource}.`,
+      });
+    }
+  });
+
+  // PATCH: update record
+  app.patch(`${route}/:id`, auth, adminOnly, async (req, res) => {
+    try {
+      if (!mongoose.isValidObjectId(req.params.id)) {
+        return res.status(400).json({
+          message: "Invalid record ID.",
+        });
+      }
+
+      const data = pickAllowedFields(req.body, fields);
+
+      if (Object.keys(data).length === 0) {
+        return res.status(400).json({
+          message: "No valid fields provided.",
+        });
+      }
+
+      for (const field of required) {
+        if (
+          data[field] !== undefined &&
+          (data[field] === null || String(data[field]).trim() === "")
+        ) {
+          return res.status(400).json({
+            message: `${field} cannot be empty.`,
+          });
+        }
+      }
+
+      const row = await Model.findByIdAndUpdate(
+        req.params.id,
+        { $set: data },
+        { new: true, runValidators: true },
+      );
+
+      if (!row) {
+        return res.status(404).json({
+          message: "Record not found.",
+        });
+      }
+
+      return res.json(row);
+    } catch (error) {
+      console.error(`Update ${resource} failed:`, error);
+
+      if (error.name === "ValidationError" || error.name === "CastError") {
+        return res.status(400).json({
+          message: error.message,
+        });
+      }
+
+      return res.status(500).json({
+        message: `Could not update ${resource}.`,
+      });
+    }
+  });
+
+  // DELETE: remove record
+  app.delete(`${route}/:id`, auth, adminOnly, async (req, res) => {
+    try {
+      if (!mongoose.isValidObjectId(req.params.id)) {
+        return res.status(400).json({
+          message: "Invalid record ID.",
+        });
+      }
+
+      const row = await Model.findByIdAndDelete(req.params.id);
+
+      if (!row) {
+        return res.status(404).json({
+          message: "Record not found.",
+        });
+      }
+
+      return res.json({
+        message: "Record deleted successfully.",
+        id: row._id,
+      });
+    } catch (error) {
+      console.error(`Delete ${resource} failed:`, error);
+
+      return res.status(500).json({
+        message: `Could not delete ${resource}.`,
+      });
+    }
+  });
+}
+
 
 // Client submits flat requirements
 app.post("/api/clients/requirements", auth, async (req, res) => {
