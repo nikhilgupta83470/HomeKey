@@ -136,48 +136,59 @@ export default function PropertiesPage({ app }) {
     }
   }
 
-  async function saveProperty(e) {
-    e.preventDefault();
+ 
+async function saveProperty(e) {
+  e.preventDefault();
 
-    if (!editingPropertyId) {
-      addProperty(e);
-      return;
-    }
-
-    setSavingProperty(true);
-
-    try {
-      const formData = new FormData();
-
-      Object.entries(propertyForm).forEach(([key, value]) => {
-        formData.append(
-          key,
-          key === "amenities" ? JSON.stringify(value) : String(value ?? ""),
-        );
-      });
-
-      photos.forEach((photo) => formData.append("photos", photo));
-      if (propertyVideo) {
-        formData.append("video", propertyVideo);
-      }
-
-      await app.api(`/admin/properties/${editingPropertyId}`, {
-        method: "PATCH",
-        body: formData,
-      });
-
-      setEditingPropertyId(null);
-      setPhotos([]);
-      setPropertyVideo(null);
-
-      await app.loadAdmin();
-      app.setNotice("Property updated successfully.");
-    } catch (error) {
-      app.setError(error.message || "Could not update property.");
-    } finally {
-      setSavingProperty(false);
-    }
+  if (!propertyForm.landlord) {
+    app.setError("Please select a landlord before saving the property.");
+    return;
   }
+
+  if (!editingPropertyId) {
+    await addProperty(e);
+    return;
+  }
+
+  setSavingProperty(true);
+
+  try {
+    const formData = new FormData();
+
+    Object.entries(propertyForm).forEach(([key, value]) => {
+      if (key === "amenities") {
+        formData.append(key, JSON.stringify(value));
+      } else if (typeof value === "boolean") {
+        formData.append(key, String(value));
+      } else {
+        formData.append(key, String(value ?? ""));
+      }
+    });
+
+    photos.forEach((photo) => formData.append("photos", photo));
+
+    if (propertyVideo) {
+      formData.append("video", propertyVideo);
+    }
+
+    await app.api(`/admin/properties/${editingPropertyId}`, {
+      method: "PATCH",
+      body: formData,
+    });
+
+    setEditingPropertyId(null);
+    setPhotos([]);
+    setPropertyVideo(null);
+
+    await app.loadAdmin();
+    app.setNotice("Property updated successfully.");
+  } catch (error) {
+    app.setError(error.message || "Could not update property.");
+  } finally {
+    setSavingProperty(false);
+  }
+}
+
 
   const propertyId = (property) => String(property?._id || property?.id || "");
 

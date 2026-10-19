@@ -8,7 +8,7 @@ import PropertiesPage from "./pages/PropertiesPage";
 import LandlordsPage from "./pages/LandlordsPage";
 import ClientsPage from "./pages/ClientsPage";
 import AboutUsPage from "./pages/AboutUsPage";
-
+import TasksPage from "./pages/TasksPage";
 import AdminResourcePage from "./pages/AdminResourcePage";
 import AboutBrokerPage from "./pages/AboutBrokerPage";
 import RequirementsPage from "./pages/RequirementsPage";
@@ -575,17 +575,12 @@ async function addLandlord(e) {
         {view === "property-details" && <PropertyDetailsPage app={pageProps} />}
         {view === "landlords" && admin && <LandlordsPage app={pageProps} />}
         {view === "about-us" && <AboutUsPage />}
+        {view === "tasks" && admin && <TasksPage app={pageProps} />}
+
         {admin &&
-          [
-            "inquiries",
-            "tasks",
-            "projects",
-            "deals",
-            "contacts",
-            "notes",
-          ].includes(view) && (
-            <AdminResourcePage key={view} app={pageProps} resource={view} />
-          )}
+          ["inquiries", "projects", "deals", "contacts", "notes"].includes(
+            view,
+          ) && <AdminResourcePage key={view} app={pageProps} resource={view} />}
         {view === "about-broker" && <AboutBrokerPage />}
         {view === "clients" && admin && <ClientsPage app={pageProps} />}
         {view === "requirements" && user && (

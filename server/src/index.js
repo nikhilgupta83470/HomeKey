@@ -253,6 +253,82 @@ app.post("/api/auth/google", async (req, res) => {
       }
     }
 
+    /* ADMIN: UPDATE CLIENT FOLLOW-UP */
+    app.patch(
+      "/api/admin/clients/requirements/:id/follow-up",
+      auth,
+      adminOnly,
+      async (req, res) => {
+        try {
+          const { id } = req.params;
+          const { followUpDate, notes } = req.body;
+
+          if (!mongoose.isValidObjectId(id)) {
+            return res.status(400).json({
+              message: "Invalid requirement ID.",
+            });
+          }
+
+          const update = {};
+
+          if (followUpDate !== undefined) {
+            if (followUpDate === null || followUpDate === "") {
+              update.followUpDate = null;
+            } else {
+              const date = new Date(followUpDate);
+
+              if (Number.isNaN(date.getTime())) {
+                return res.status(400).json({
+                  message: "Invalid follow-up date.",
+                });
+              }
+
+              update.followUpDate = date;
+            }
+          }
+
+          if (notes !== undefined) {
+            if (typeof notes !== "string" || notes.length > 1000) {
+              return res.status(400).json({
+                message: "Notes must be text up to 1000 characters.",
+              });
+            }
+
+            update.notes = notes.trim();
+          }
+
+          if (!Object.keys(update).length) {
+            return res.status(400).json({
+              message: "Provide a follow-up date or notes.",
+            });
+          }
+
+          const requirement = await ClientRequest.findByIdAndUpdate(
+            id,
+            { $set: update },
+            { new: true, runValidators: true },
+          );
+
+          if (!requirement) {
+            return res.status(404).json({
+              message: "Client requirement not found.",
+            });
+          }
+
+          return res.json({
+            message: "Follow-up updated successfully.",
+            requirement,
+          });
+        } catch (error) {
+          console.error("Follow-up update failed:", error);
+
+          return res.status(500).json({
+            message: "Could not update follow-up.",
+          });
+        }
+      },
+    );
+
     // IMPORTANT:
     // Yahan apne existing email-login route wali
     // exact JWT signing line use karna.
@@ -281,6 +357,51 @@ app.post("/api/auth/google", async (req, res) => {
 // Current logged-in user
 app.get("/api/auth/me", auth, (req, res) => {
   res.json({ user: req.user });
+});
+
+app.patch("/api/profile", auth, async (req, res) => {
+  try {
+    const allowedFields = ["name", "phone"];
+    const updates = {};
+
+    for (const field of allowedFields) {
+      if (typeof req.body[field] === "string") {
+        updates[field] = req.body[field].trim();
+      }
+    }
+
+    if (updates.name !== undefined && !updates.name) {
+      return res.status(400).json({
+        message: "Name cannot be empty.",
+      });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { $set: updates },
+      {
+        new: true,
+        runValidators: true,
+      },
+    ).select("-passwordHash");
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found.",
+      });
+    }
+
+    res.json({
+      message: "Profile updated successfully.",
+      user,
+    });
+  } catch (error) {
+    console.error("Profile update failed:", error);
+
+    res.status(500).json({
+      message: "Could not update profile.",
+    });
+  }
 });
 
 // =====================================================
@@ -477,6 +598,56 @@ app.get("/api/admin/clients", auth, adminOnly, async (_req, res) => {
   }
 });
 
+/* ADMIN: UPDATE CLIENT REQUIREMENT STATUS */
+app.patch(
+  "/api/admin/clients/requirements/:id/status",
+  auth,
+  adminOnly,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+
+      if (!mongoose.isValidObjectId(id)) {
+        return res.status(400).json({
+          message: "Invalid requirement ID.",
+        });
+      }
+
+      const allowedStatuses = ["NEW", "CONTACTED", "VISIT_SCHEDULED", "CLOSED"];
+
+      if (!allowedStatuses.includes(status)) {
+        return res.status(400).json({
+          message: "Invalid requirement status.",
+        });
+      }
+
+      const requirement = await ClientRequest.findByIdAndUpdate(
+        id,
+        { $set: { status } },
+        { new: true, runValidators: true },
+      );
+
+      if (!requirement) {
+        return res.status(404).json({
+          message: "Client requirement not found.",
+        });
+      }
+
+      return res.json({
+        message: "Requirement status updated successfully.",
+        requirement,
+      });
+    } catch (error) {
+      console.error("Requirement status update failed:", error);
+
+      return res.status(500).json({
+        message: "Could not update requirement status.",
+      });
+    }
+  },
+);
+
 // Admin landlords
 
 app.get("/api/admin/landlords", auth, adminOnly, async (_req, res) => {
@@ -536,7 +707,6 @@ app.get("/api/admin/landlords", auth, adminOnly, async (_req, res) => {
   }
 });
 
-
 // Update landlord
 app.patch("/api/admin/landlords/:id", auth, adminOnly, async (req, res) => {
   try {
@@ -570,10 +740,7 @@ app.patch("/api/admin/landlords/:id", auth, adminOnly, async (req, res) => {
       });
     }
 
-    if (
-      update.fullName !== undefined &&
-      !String(update.fullName).trim()
-    ) {
+    if (update.fullName !== undefined && !String(update.fullName).trim()) {
       return res.status(400).json({
         message: "Landlord name is required.",
       });
@@ -600,7 +767,7 @@ app.patch("/api/admin/landlords/:id", auth, adminOnly, async (req, res) => {
     const landlord = await Landlord.findByIdAndUpdate(
       req.params.id,
       { $set: update },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     );
 
     if (!landlord) {
@@ -1016,40 +1183,70 @@ const adminResources = {
   inquiries: {
     Model: Inquiry,
     fields: [
-      "client", "property", "name", "phone", "email",
-      "message", "source", "status", "followUpDate", "notes",
+      "client",
+      "property",
+      "name",
+      "phone",
+      "email",
+      "message",
+      "source",
+      "status",
+      "followUpDate",
+      "notes",
     ],
     required: ["name"],
   },
+
   tasks: {
     Model: Task,
     fields: [
-      "title", "description", "dueDate", "priority", "status",
-      "assignedTo", "relatedProperty", "relatedClient",
+      "title",
+      "taskType",
+      "date",
+      "time",
+      "status",
+      "property",
+      "inquiry",
+      "project",
+      "assignedTo",
+      "notes",
+      "deleted",
+      "isDeleted",
     ],
-    required: ["title"],
+    required: ["title", "date", "time"],
   },
+
   projects: {
     Model: Project,
     fields: [
-      "name", "description", "location", "status",
-      "startDate", "endDate", "properties",
+      "name",
+      "description",
+      "location",
+      "status",
+      "startDate",
+      "endDate",
+      "properties",
     ],
     required: ["name"],
   },
   deals: {
     Model: Deal,
     fields: [
-      "title", "client", "property", "landlord", "amount",
-      "dealType", "status", "expectedCloseDate", "notes",
+      "title",
+      "client",
+      "property",
+      "landlord",
+      "amount",
+      "dealType",
+      "status",
+      "expectedCloseDate",
+      "notes",
     ],
     required: ["title"],
   },
   contacts: {
     Model: Contact,
-    fields: [
-      "name", "phone", "email", "company", "contactType", "notes",
-    ],
+    fields: ["name", "phone", "email", "company", "contactType", "notes"],
     required: ["name"],
   },
   notes: {
@@ -1078,9 +1275,7 @@ for (const [resource, config] of Object.entries(adminResources)) {
   // GET: all records
   app.get(route, auth, adminOnly, async (_req, res) => {
     try {
-      const rows = await Model.find()
-        .sort({ createdAt: -1 })
-        .lean();
+      const rows = await Model.find().sort({ createdAt: -1 }).lean();
 
       return res.json(rows);
     } catch (error) {
@@ -1213,7 +1408,6 @@ for (const [resource, config] of Object.entries(adminResources)) {
     }
   });
 }
-
 
 // Client submits flat requirements
 app.post("/api/clients/requirements", auth, async (req, res) => {

@@ -163,7 +163,11 @@ export default function LandlordsPage({ app }) {
                   <article className="content-card" key={p._id}>
                     {p.photos?.[0] ? (
                       <img
-                        src={serverUrl(p.photos[0])}
+                        src={
+                          p.photos[0].startsWith("http")
+                            ? p.photos[0]
+                            : `${import.meta.env.VITE_SERVER_URL || "http://localhost:5000"}${p.photos[0]}`
+                        }
                         alt={p.title || "Property"}
                         className="mb-4 h-48 w-full rounded-xl object-cover"
                       />
@@ -318,21 +322,28 @@ export default function LandlordsPage({ app }) {
                           <p className="mb-2 font-semibold">
                             More photos ({p.photos.length - 1})
                           </p>
+
                           <div className="grid grid-cols-3 gap-2">
-                            {p.photos.slice(1).map((photo, index) => (
-                              <a
-                                key={`${photo}-${index}`}
-                                href={serverUrl(photo)}
-                                target="_blank"
-                                rel="noreferrer"
-                              >
-                                <img
-                                  src={serverUrl(photo)}
-                                  alt={`${p.title} ${index + 2}`}
-                                  className="h-20 w-full rounded-lg object-cover"
-                                />
-                              </a>
-                            ))}
+                            {p.photos.slice(1).map((photo, index) => {
+                              const photoUrl = photo.startsWith("http")
+                                ? photo
+                                : `${import.meta.env.VITE_SERVER_URL || "http://localhost:5000"}${photo}`;
+
+                              return (
+                                <a
+                                  key={`${photo}-${index}`}
+                                  href={photoUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  <img
+                                    src={photoUrl}
+                                    alt={`${p.title || "Property"} ${index + 2}`}
+                                    className="h-20 w-full rounded-lg object-cover"
+                                  />
+                                </a>
+                              );
+                            })}
                           </div>
                         </div>
                       )}

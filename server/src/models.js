@@ -165,6 +165,20 @@ const clientRequestSchema = new mongoose.Schema(
     shiftingDate: String,
     pets: String,
     consent: { type: Boolean, required: true, default: false },
+    status: {
+      type: String,
+      enum: ["NEW", "CONTACTED", "VISIT_SCHEDULED", "CLOSED"],
+      default: "NEW",
+    },
+    followUpDate: {
+      type: Date,
+      default: null,
+    },
+    notes: {
+      type: String,
+      default: "",
+      maxlength: 1000,
+    },
   },
   { timestamps: true },
 );
@@ -214,36 +228,83 @@ const inquirySchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-// Task: reminders and daily work
+
+/* Task: admin daily work and reminders */
 const taskSchema = new mongoose.Schema(
   {
-    title: { type: String, required: true, trim: true },
-    description: { type: String, default: "" },
-    dueDate: { type: Date, default: null },
-    priority: {
+    title: {
       type: String,
-      enum: ["Low", "Medium", "High"],
-      default: "Medium",
+      required: true,
+      trim: true,
     },
+
+    taskType: {
+      type: String,
+      enum: [
+        "Call",
+        "Site Visit",
+        "Payment",
+        "Renewal / Vacant",
+        "Other",
+      ],
+      default: "Call",
+    },
+
+    date: {
+      type: String,
+      required: true,
+    },
+
+    time: {
+      type: String,
+      required: true,
+    },
+
     status: {
       type: String,
-      enum: ["Pending", "In Progress", "Completed"],
-      default: "Pending",
+      enum: ["Scheduled", "Completed", "Cancelled"],
+      default: "Scheduled",
     },
-    assignedTo: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      default: null,
-    },
-    relatedProperty: {
+
+    property: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Property",
       default: null,
     },
-    relatedClient: {
+
+    inquiry: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: "Inquiry",
       default: null,
+    },
+
+    // The current TasksPage uses a text input for project.
+    project: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    // The current TasksPage selects an entry from the landlords list.
+    assignedTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Landlord",
+      default: null,
+    },
+
+    notes: {
+      type: String,
+      default: "",
+    },
+
+    deleted: {
+      type: Boolean,
+      default: false,
+    },
+
+    isDeleted: {
+      type: Boolean,
+      default: false,
     },
   },
   { timestamps: true },
