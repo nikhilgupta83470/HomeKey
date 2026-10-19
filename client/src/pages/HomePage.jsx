@@ -19,6 +19,20 @@ import {
 } from "lucide-react";
 import { money, serverUrl } from "../api";
 
+const DEFAULT_FILTERS = {
+  purpose: "Any purpose",
+  location: "",
+  budget: "Any budget",
+  minBudget: "",
+  maxBudget: "",
+  bhk: "Any BHK",
+  furnished: "Any",
+  kind: "Any type",
+  rentalCategory: "Any category",
+  bathrooms: "Any",
+  sortBy: "newest",
+};
+
 export default function HomePage({ app }) {
   const {
     user,
@@ -28,16 +42,18 @@ export default function HomePage({ app }) {
     setPropertyFilters,
   } = app;
 
-  const filters = propertyFilters || {
-    purpose: "Rent",
-    location: "",
-    budget: "Any budget",
-    bhk: "Any BHK",
-    furnished: "Any",
-  };
+  const filters = { ...DEFAULT_FILTERS, ...(propertyFilters || {}) };
 
   const updateFilter = (key, value) => {
-    setPropertyFilters?.((prev) => ({ ...prev, [key]: value }));
+    setPropertyFilters?.((prev) => ({
+      ...DEFAULT_FILTERS,
+      ...(prev || {}),
+      [key]: value,
+    }));
+  };
+
+  const resetFilters = () => {
+    setPropertyFilters?.({ ...DEFAULT_FILTERS });
   };
 
   const [favorites, setFavorites] = useState([]);
@@ -48,43 +64,96 @@ export default function HomePage({ app }) {
   );
 
   const filteredProperties = useMemo(() => {
-    return availableProperties.filter((p) => {
+    const result = availableProperties.filter((p) => {
       const searchText = `${p.location || ""} ${p.area || ""} ${
         p.sector || ""
       } ${p.title || ""}`.toLowerCase();
 
+      const locationValue = String(filters.location || "")
+        .trim()
+        .toLowerCase();
+
       const matchesLocation =
-        !filters.location.trim() ||
-        searchText.includes(filters.location.trim().toLowerCase());
+        !locationValue || searchText.includes(locationValue);
+
+      const price = Number(p.rent || 0);
 
       const matchesBudget =
-        filters.budget === "Any budget" ||
-        Number(p.rent) <= Number(filters.budget);
+        (filters.minBudget === "" || price >= Number(filters.minBudget)) &&
+        (filters.maxBudget === "" || price <= Number(filters.maxBudget));
+
+      const bhkValue = String(filters.bhk || "Any BHK")
+        .replace(" BHK", "")
+        .toLowerCase();
 
       const matchesBhk =
         filters.bhk === "Any BHK" ||
         String(p.bhk || "")
           .toLowerCase()
-          .includes(filters.bhk.replace(" BHK", "").toLowerCase());
+          .includes(bhkValue);
 
       const matchesFurnished =
         filters.furnished === "Any" ||
         String(p.furnished || "").toLowerCase() ===
-          filters.furnished.toLowerCase();
+          String(filters.furnished).toLowerCase();
 
       const matchesPurpose =
+        filters.purpose === "Any purpose" ||
         String(p.purpose || "Rent").toLowerCase() ===
-        filters.purpose.toLowerCase();
+          String(filters.purpose).toLowerCase();
+
+      const matchesKind =
+        filters.kind === "Any type" ||
+        String(p.kind || "").toLowerCase() ===
+          String(filters.kind).toLowerCase();
+
+      const matchesCategory =
+        filters.rentalCategory === "Any category" ||
+        String(p.rentalCategory || "").toLowerCase() ===
+          String(filters.rentalCategory).toLowerCase();
+
+      const matchesBathrooms =
+        filters.bathrooms === "Any" ||
+        Number(p.bathrooms || 0) >= Number(filters.bathrooms);
 
       return (
         matchesLocation &&
         matchesBudget &&
         matchesBhk &&
         matchesFurnished &&
-        matchesPurpose
+        matchesPurpose &&
+        matchesKind &&
+        matchesCategory &&
+        matchesBathrooms
       );
     });
-  }, [availableProperties, filters]);
+
+    if (filters.sortBy === "rent-low") {
+      result.sort((a, b) => Number(a.rent || 0) - Number(b.rent || 0));
+    } else if (filters.sortBy === "rent-high") {
+      result.sort((a, b) => Number(b.rent || 0) - Number(a.rent || 0));
+    } else if (filters.sortBy === "newest") {
+      result.sort(
+        (a, b) =>
+          new Date(b.createdAt || 0).getTime() -
+          new Date(a.createdAt || 0).getTime(),
+      );
+    }
+
+    return result;
+  }, [
+    availableProperties,
+    filters.location,
+    filters.minBudget,
+    filters.maxBudget,
+    filters.bhk,
+    filters.furnished,
+    filters.purpose,
+    filters.kind,
+    filters.rentalCategory,
+    filters.bathrooms,
+    filters.sortBy,
+  ]);
 
   const imageUrl = (photo) => {
     if (!photo) return "";
@@ -141,6 +210,19 @@ export default function HomePage({ app }) {
     cursor: "pointer",
     textAlign: "left",
     fontSize: "14px",
+  };
+
+  const fieldLabelStyle = {
+    color: "#555",
+    fontSize: "13px",
+    display: "block",
+  };
+
+  const fieldTitleStyle = {
+    display: "flex",
+    gap: "6px",
+    alignItems: "center",
+    marginBottom: "8px",
   };
 
   return (
@@ -227,6 +309,7 @@ export default function HomePage({ app }) {
           }}
         >
           <span style={eyebrowStyle}>FIND YOUR PERFECT PLACE</span>
+
           <div
             style={{
               display: "flex",
@@ -249,13 +332,24 @@ export default function HomePage({ app }) {
             <SlidersHorizontal size={26} color="#8b7554" />
           </div>
 
-          <div style={{ display: "flex", gap: "10px", margin: "25px 0 18px" }}>
-            {["Rent", "Buy"].map((item) => (
+          <div
+            style={{
+              display: "flex",
+              gap: "10px",
+              margin: "25px 0 18px",
+              flexWrap: "wrap",
+            }}
+          >
+            {["Any purpose", "Rent", "Buy"].map((item) => (
               <button
                 key={item}
+                type="button"
                 onClick={() => updateFilter("purpose", item)}
                 style={{
-                  padding: "11px 25px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "7px",
+                  padding: "11px 22px",
                   borderRadius: "30px",
                   border: "1px solid",
                   borderColor: filters.purpose === item ? "#252525" : "#e5e7eb",
@@ -265,7 +359,11 @@ export default function HomePage({ app }) {
                   fontWeight: 600,
                 }}
               >
-                {item === "Rent" ? <KeyRound size={15} /> : <Home size={15} />}{" "}
+                {item === "Rent" ? (
+                  <KeyRound size={15} />
+                ) : item === "Buy" ? (
+                  <Home size={15} />
+                ) : null}
                 {item}
               </button>
             ))}
@@ -279,10 +377,8 @@ export default function HomePage({ app }) {
               alignItems: "end",
             }}
           >
-            <label style={{ color: "#555", fontSize: "13px" }}>
-              <span
-                style={{ display: "flex", gap: "6px", marginBottom: "8px" }}
-              >
+            <label style={fieldLabelStyle}>
+              <span style={fieldTitleStyle}>
                 <MapPin size={15} /> Location
               </span>
               <input
@@ -293,31 +389,44 @@ export default function HomePage({ app }) {
               />
             </label>
 
-            <label style={{ color: "#555", fontSize: "13px" }}>
-              <span
-                style={{ display: "flex", gap: "6px", marginBottom: "8px" }}
-              >
-                <Wallet size={15} /> Maximum budget
+            <label style={fieldLabelStyle}>
+              <span style={fieldTitleStyle}>
+                <Wallet size={15} /> Minimum budget
               </span>
               <select
-                value={filters.budget}
-                onChange={(e) => updateFilter("budget", e.target.value)}
+                value={filters.minBudget}
+                onChange={(e) => updateFilter("minBudget", e.target.value)}
                 style={selectStyle}
               >
-                <option>Any budget</option>
-                <option value="5000">₹5,000</option>
-                <option value="10000">₹10,000</option>
-                <option value="15000">₹15,000</option>
-                <option value="25000">₹25,000</option>
-                <option value="50000">₹50,000</option>
-                <option value="100000">₹1,00,000</option>
+                <option value="">No minimum</option>
+                {[5000, 10000, 15000, 25000, 50000].map((n) => (
+                  <option key={n} value={n}>
+                    ₹{n.toLocaleString("en-IN")}
+                  </option>
+                ))}
               </select>
             </label>
 
-            <label style={{ color: "#555", fontSize: "13px" }}>
-              <span
-                style={{ display: "flex", gap: "6px", marginBottom: "8px" }}
+            <label style={fieldLabelStyle}>
+              <span style={fieldTitleStyle}>
+                <Wallet size={15} /> Maximum budget
+              </span>
+              <select
+                value={filters.maxBudget}
+                onChange={(e) => updateFilter("maxBudget", e.target.value)}
+                style={selectStyle}
               >
+                <option value="">No maximum</option>
+                {[10000, 15000, 25000, 50000, 100000].map((n) => (
+                  <option key={n} value={n}>
+                    ₹{n.toLocaleString("en-IN")}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label style={fieldLabelStyle}>
+              <span style={fieldTitleStyle}>
                 <BedDouble size={15} /> Bedrooms
               </span>
               <select
@@ -333,10 +442,8 @@ export default function HomePage({ app }) {
               </select>
             </label>
 
-            <label style={{ color: "#555", fontSize: "13px" }}>
-              <span
-                style={{ display: "flex", gap: "6px", marginBottom: "8px" }}
-              >
+            <label style={fieldLabelStyle}>
+              <span style={fieldTitleStyle}>
                 <Home size={15} /> Furnishing
               </span>
               <select
@@ -351,17 +458,96 @@ export default function HomePage({ app }) {
               </select>
             </label>
 
-            <button
-              className="btn btn-dark"
-              onClick={() => go("properties")}
-              style={{
-                minHeight: "45px",
-                justifyContent: "center",
-                borderRadius: "10px",
-              }}
-            >
-              <Search size={17} /> Search homes
-            </button>
+            <label style={fieldLabelStyle}>
+              <span style={fieldTitleStyle}>
+                <Building2 size={15} /> Property type
+              </span>
+              <select
+                value={filters.kind}
+                onChange={(e) => updateFilter("kind", e.target.value)}
+                style={selectStyle}
+              >
+                <option value="Any type">Any type</option>
+                <option value="Flat">Flat</option>
+                <option value="House">House</option>
+                <option value="PG">PG</option>
+              </select>
+            </label>
+
+            <label style={fieldLabelStyle}>
+              <span style={fieldTitleStyle}>
+                <Users size={15} /> Suitable for
+              </span>
+              <select
+                value={filters.rentalCategory}
+                onChange={(e) => updateFilter("rentalCategory", e.target.value)}
+                style={selectStyle}
+              >
+                <option value="Any category">Family or student</option>
+                <option value="Family">Family</option>
+                <option value="Student">Student</option>
+              </select>
+            </label>
+
+            <label style={fieldLabelStyle}>
+              <span style={fieldTitleStyle}>Bathrooms</span>
+              <select
+                value={filters.bathrooms}
+                onChange={(e) => updateFilter("bathrooms", e.target.value)}
+                style={selectStyle}
+              >
+                <option value="Any">Any</option>
+                <option value="1">1+ bathroom</option>
+                <option value="2">2+ bathrooms</option>
+                <option value="3">3+ bathrooms</option>
+              </select>
+            </label>
+
+            <label style={fieldLabelStyle}>
+              <span style={fieldTitleStyle}>Sort properties</span>
+              <select
+                value={filters.sortBy}
+                onChange={(e) => updateFilter("sortBy", e.target.value)}
+                style={selectStyle}
+              >
+                <option value="newest">Newest first</option>
+                <option value="rent-low">Price: Low to High</option>
+                <option value="rent-high">Price: High to Low</option>
+              </select>
+            </label>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: "12px",
+              flexWrap: "wrap",
+              marginTop: "22px",
+            }}
+          >
+            <span style={{ color: "#777", fontSize: "14px" }}>
+              {filteredProperties.length} matching properties
+            </span>
+
+            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+              <button
+                type="button"
+                className="btn btn-light"
+                onClick={resetFilters}
+              >
+                Clear all filters
+              </button>
+              <button
+                type="button"
+                className="btn btn-dark"
+                onClick={() => go("properties")}
+                style={{ justifyContent: "center", borderRadius: "10px" }}
+              >
+                <Search size={17} /> Search homes
+              </button>
+            </div>
           </div>
         </div>
       </section>
@@ -384,7 +570,7 @@ export default function HomePage({ app }) {
               Featured properties
             </h2>
             <p style={{ color: "#777", margin: 0 }}>
-              Discover available homes for your next move.
+              {filteredProperties.length} homes match your selected filters.
             </p>
           </div>
           <button className="btn btn-light" onClick={() => go("properties")}>
@@ -467,6 +653,7 @@ export default function HomePage({ app }) {
                     </span>
 
                     <button
+                      type="button"
                       aria-label={saved ? "Remove favourite" : "Add favourite"}
                       onClick={() => toggleFavorite(property._id)}
                       style={{
@@ -576,18 +763,7 @@ export default function HomePage({ app }) {
             <Building2 size={35} />
             <h3 style={{ color: "#333" }}>No matching properties found</h3>
             <p>Try changing your location or budget filters.</p>
-            <button
-              className="btn btn-light"
-              onClick={() =>
-                setPropertyFilters?.({
-                  purpose: "Rent",
-                  location: "",
-                  budget: "Any budget",
-                  bhk: "Any BHK",
-                  furnished: "Any",
-                })
-              }
-            >
+            <button className="btn btn-light" onClick={resetFilters}>
               Clear filters
             </button>
           </div>
@@ -825,7 +1001,7 @@ export default function HomePage({ app }) {
 
       {/* QUICK LINKS */}
       <section
-        style={{ ...sectionStyle, marginBottom: "0", paddingBottom: "55px" }}
+        style={{ ...sectionStyle, marginBottom: 0, paddingBottom: "55px" }}
       >
         <span style={eyebrowStyle}>DISCOVER MORE</span>
         <h2 style={{ fontSize: "30px", margin: "10px 0 25px" }}>
@@ -844,6 +1020,7 @@ export default function HomePage({ app }) {
             const selected =
               (tab === "Buy" && filters.purpose === "Buy") ||
               (tab === "Rent / Lease" && filters.purpose === "Rent");
+
             return (
               <button
                 key={tab}
@@ -937,7 +1114,7 @@ export default function HomePage({ app }) {
         </div>
       </section>
 
-      {/* FULL-WIDTH FOOTER */}
+      {/* FOOTER */}
       <footer
         style={{
           background: "#151d22",
@@ -1068,6 +1245,7 @@ export default function HomePage({ app }) {
           </span>
           <span>Find your place. Start your next chapter.</span>
           <button
+            type="button"
             aria-label="Back to top"
             onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
             style={{

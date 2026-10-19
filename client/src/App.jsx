@@ -58,10 +58,15 @@ function App() {
     purpose: "Any purpose",
     location: "",
     budget: "Any budget",
+    minBudget: "",
+    maxBudget: "",
     bhk: "Any BHK",
     furnished: "Any",
+    kind: "Any type",
+    rentalCategory: "Any category",
+    bathrooms: "Any",
+    sortBy: "newest",
   });
-
   const [notice, setNotice] = useState(""),
     [error, setError] = useState("");
   const [requirement, setRequirement] = useState(emptyRequirement);
@@ -335,25 +340,25 @@ function App() {
       setError(e.message);
     }
   }
-async function deletePropertyFromDetails(id) {
-  try {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this property?",
-    );
+  async function deletePropertyFromDetails(id) {
+    try {
+      const confirmed = window.confirm(
+        "Are you sure you want to delete this property?",
+      );
 
-    if (!confirmed) return;
+      if (!confirmed) return;
 
-    await api(`/admin/properties/${id}`, {
-      method: "DELETE",
-    });
+      await api(`/admin/properties/${id}`, {
+        method: "DELETE",
+      });
 
-    await loadAdmin();
-    setNotice("Property deleted successfully.");
-    go("properties");
-  } catch (e) {
-    setError(e.message || "Could not delete property.");
+      await loadAdmin();
+      setNotice("Property deleted successfully.");
+      go("properties");
+    } catch (e) {
+      setError(e.message || "Could not delete property.");
+    }
   }
-}
   async function createPayment(e) {
     e.preventDefault();
     resetMessages();

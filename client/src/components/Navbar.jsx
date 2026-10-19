@@ -1,3 +1,4 @@
+
 import React from "react";
 import {
   Home,
@@ -19,25 +20,34 @@ export default function Navbar({ app }) {
     view,
     mobileMenu,
     setMobileMenu,
-    authMode,
     setAuthMode,
     nav,
     logout,
     go,
   } = app;
 
-  // Add About Us and About Broker to the existing navbar
   const aboutLinks = [
     ["about-us", "About Us", Info],
     ["about-broker", "About Broker", UserRound],
   ];
 
-  const allNavLinks = [...nav, ...aboutLinks];
+  const allNavLinks = [...nav, ...aboutLinks].filter(
+    ([id, label]) => id !== "profile" && label.toLowerCase() !== "my profile",
+  );
 
   return (
     <header className="topbar">
-      <button className="brand" onClick={() => go("home")}>
-        <img src="/assets/ascend-logo.jpg" alt="Ascend Pro Realty" className="brand-logo" />
+      <button
+        className="brand"
+        onClick={() => go("home")}
+        type="button"
+      >
+        <img
+          src="/assets/ascend-logo.jpg"
+          alt="Ascend Pro Realty"
+          className="brand-logo"
+        />
+
         <span className="brand-name">
           ASCEND PRO REALTY
           <small>REAL ESTATE CONSULTANTS</small>
@@ -47,6 +57,8 @@ export default function Navbar({ app }) {
       <button
         className="mobile-toggle"
         onClick={() => setMobileMenu(!mobileMenu)}
+        type="button"
+        aria-label="Toggle navigation"
       >
         {mobileMenu ? <X /> : <Menu />}
       </button>
@@ -55,6 +67,7 @@ export default function Navbar({ app }) {
         {allNavLinks.map(([id, label, Icon]) => (
           <button
             key={id}
+            type="button"
             className={view === id ? "nav-item active" : "nav-item"}
             onClick={() => {
               go(id);
@@ -67,12 +80,39 @@ export default function Navbar({ app }) {
         ))}
 
         {user ? (
-          <button className="nav-item" onClick={logout}>
-            <LogOut size={17} />
-            Logout
-          </button>
+          <>
+            <button
+              type="button"
+              className="nav-item"
+              onClick={() => {
+                logout();
+                setMobileMenu(false);
+              }}
+            >
+              <LogOut size={17} />
+              Logout
+            </button>
+
+            <button
+              type="button"
+              className={
+                view === "profile"
+                  ? "profile-icon-btn active"
+                  : "profile-icon-btn"
+              }
+              onClick={() => {
+                go("profile");
+                setMobileMenu(false);
+              }}
+              title="My Profile"
+              aria-label="My Profile"
+            >
+              <UserRound size={21} />
+            </button>
+          </>
         ) : (
           <button
+            type="button"
             className="btn btn-dark nav-login"
             onClick={() => {
               setAuthMode("login");

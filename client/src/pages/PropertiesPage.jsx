@@ -256,62 +256,136 @@ export default function PropertiesPage({ app }) {
     });
   }
 
-  const filteredProperties = properties.filter((p) => {
-    if (!admin && p.available === false) return false;
+  const DEFAULT_FILTERS = {
+    purpose: "Any purpose",
+    location: "",
+    budget: "Any budget",
+    minBudget: "",
+    maxBudget: "",
+    bhk: "Any BHK",
+    furnished: "Any",
+    kind: "Any type",
+    rentalCategory: "Any category",
+    bathrooms: "Any",
+    sortBy: "newest",
+  };
 
-    const {
-      purpose = "Rent",
-      location = "",
-      budget = "Any budget",
-      bhk = "Any BHK",
-      furnished = "Any",
-    } = propertyFilters || {};
+  const filters = { ...DEFAULT_FILTERS, ...(propertyFilters || {}) };
 
-    const searchText = [p.location, p.area, p.sector, p.title]
+  const updateFilter = (name, value) => {
+    setPropertyFilters((previous) => ({
+      ...DEFAULT_FILTERS,
+      ...(previous || {}),
+      [name]: value,
+    }));
+  };
+
+  const resetFilters = () => setPropertyFilters({ ...DEFAULT_FILTERS });
+
+  const availableProperties = properties.filter((p) => {
+    if (admin) return true;
+
+    return (
+      p.available !== false &&
+      String(p.status || "Available").toLowerCase() === "available"
+    );
+  });
+
+  const matchesFilters = (p) => {
+    const searchText = [p.title, p.location, p.area, p.sector]
       .filter(Boolean)
       .join(" ")
       .toLowerCase();
 
-    const matchesLocation =
-      !location.trim() || searchText.includes(location.trim().toLowerCase());
-
+    const query = filters.location.trim().toLowerCase();
     const price = Number(p.rent ?? p.price ?? 0);
+    const purpose = String(p.purpose || "Rent").toLowerCase();
+    const selectedPurpose = filters.purpose.toLowerCase();
 
-    const matchesBudget =
-      budget === "Any budget" || (price > 0 && price <= Number(budget));
-
-    const matchesBhk =
-      bhk === "Any BHK" ||
-      String(p.bhk || "")
-        .toLowerCase()
-        .includes(bhk.replace(" BHK", "").toLowerCase());
-
-    const matchesFurnished =
-      furnished === "Any" ||
-      String(p.furnished || "").toLowerCase() === furnished.toLowerCase();
-
-    const propertyPurpose = String(p.purpose || "Rent").toLowerCase();
+    const matchesLocation = !query || searchText.includes(query);
 
     const matchesPurpose =
-      purpose === "Any purpose" ||
-      propertyPurpose === String(purpose).toLowerCase() ||
-      propertyPurpose === "both";
+      filters.purpose === "Any purpose" ||
+      purpose === selectedPurpose ||
+      purpose === "both";
+
+    const matchesMin =
+      filters.minBudget === "" || price >= Number(filters.minBudget);
+
+    const matchesMax =
+      filters.maxBudget !== ""
+        ? price <= Number(filters.maxBudget)
+        : filters.budget === "Any budget" || price <= Number(filters.budget);
+
+    const selectedBhk = filters.bhk.replace(" BHK", "").toLowerCase();
+    const actualBhk = String(p.bhk || "").toLowerCase();
+
+    const matchesBhk =
+      filters.bhk === "Any BHK" ||
+      (filters.bhk === "4+ BHK"
+        ? Number.parseInt(actualBhk, 10) >= 4
+        : actualBhk.includes(selectedBhk));
+
+    const matchesFurnished =
+      filters.furnished === "Any" ||
+      String(p.furnished || "").toLowerCase() ===
+        filters.furnished.toLowerCase();
+
+    const matchesKind =
+      filters.kind === "Any type" ||
+      String(p.kind || "").toLowerCase() === filters.kind.toLowerCase();
+
+    const matchesCategory =
+      filters.rentalCategory === "Any category" ||
+      String(p.rentalCategory || "").toLowerCase() ===
+        filters.rentalCategory.toLowerCase();
+
+    const matchesBathrooms =
+      filters.bathrooms === "Any" ||
+      Number(p.bathrooms || 0) >= Number(filters.bathrooms);
 
     return (
       matchesLocation &&
-      matchesBudget &&
+      matchesPurpose &&
+      matchesMin &&
+      matchesMax &&
       matchesBhk &&
       matchesFurnished &&
-      matchesPurpose
+      matchesKind &&
+      matchesCategory &&
+      matchesBathrooms
     );
-  });
+  };
+
+  const filteredProperties = availableProperties
+    .filter(matchesFilters)
+    .sort((a, b) => {
+      const priceA = Number(a.rent ?? a.price ?? 0);
+      const priceB = Number(b.rent ?? b.price ?? 0);
+
+      if (filters.sortBy === "price-low") return priceA - priceB;
+      if (filters.sortBy === "price-high") return priceB - priceA;
+
+      if (filters.sortBy === "title") {
+        return String(a.title || "").localeCompare(String(b.title || ""));
+      }
+
+      return 0;
+    });
+
+  const hasMatchingProperties = filteredProperties.length > 0;
+
+  // No matches? Show other available properties as a fallback.
+  const propertiesToShow = hasMatchingProperties
+    ? filteredProperties
+    : availableProperties;
 
   const visibleProperties =
     listingMode === "wishlist"
-      ? filteredProperties.filter((property) => isSaved(property))
+      ? propertiesToShow.filter((property) => isSaved(property))
       : listingMode === "compare"
         ? []
-        : filteredProperties;
+        : propertiesToShow;
 
   const comparedProperties = selectedForCompare
     .map((id) => properties.find((property) => propertyId(property) === id))
@@ -425,95 +499,149 @@ export default function PropertiesPage({ app }) {
         </button>
       )}
 
-      {/* RENT / BUY FILTERS */}
-      {!admin && (
-        <div className="content-card" style={{ marginBottom: 24 }}>
-          <div className="form-grid three">
-            <Field
-              label="Listing purpose"
-              name="purposeFilter"
-              value={propertyFilters.purpose}
-              onChange={(e) =>
-                setPropertyFilters({
-                  ...propertyFilters,
-                  purpose: e.target.value,
-                })
-              }
-              options={["Any purpose", "Rent", "Buy", "Both"]}
-            />
-
-            <Field
-              label="Location"
-              name="locationFilter"
-              value={propertyFilters.location}
-              onChange={(e) =>
-                setPropertyFilters({
-                  ...propertyFilters,
-                  location: e.target.value,
-                })
-              }
-              placeholder="Enter city or area"
-            />
-
-            <Field
-              label="Maximum budget (₹)"
-              name="budgetFilter"
-              value={propertyFilters.budget}
-              onChange={(e) =>
-                setPropertyFilters({
-                  ...propertyFilters,
-                  budget: e.target.value,
-                })
-              }
-              options={[
-                "Any budget",
-                "5000",
-                "10000",
-                "15000",
-                "25000",
-                "50000",
-                "100000",
-                "2500000",
-                "5000000",
-                "10000000",
-              ]}
-            />
-
-            <Field
-              label="BHK"
-              name="bhkFilter"
-              value={propertyFilters.bhk}
-              onChange={(e) =>
-                setPropertyFilters({
-                  ...propertyFilters,
-                  bhk: e.target.value,
-                })
-              }
-              options={[
-                "Any BHK",
-                "1 BHK",
-                "2 BHK",
-                "3 BHK",
-                "4+ BHK",
-                "Studio",
-              ]}
-            />
-
-            <Field
-              label="Furnishing"
-              name="furnishedFilter"
-              value={propertyFilters.furnished}
-              onChange={(e) =>
-                setPropertyFilters({
-                  ...propertyFilters,
-                  furnished: e.target.value,
-                })
-              }
-              options={["Any", "Furnished", "Semi-furnished", "Unfurnished"]}
-            />
+      {/* LEFT SIDE: PROPERTY FILTERS */}
+      <div
+        className="property-layout"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "260px minmax(0, 1fr)",
+          gap: "24px",
+          alignItems: "start",
+          marginTop: "24px",
+        }}
+      ></div>
+      <aside
+        className="content-card property-filter-sidebar"
+        style={{
+          padding: "20px",
+          marginBottom: 24,
+        }}
+      >
+        <div className="section-title">
+          <div>
+            <span className="eyebrow">PROPERTY FILTERS</span>
+            <h2>Find your home</h2>
           </div>
         </div>
-      )}
+
+        <div style={{ display: "grid", gap: 14 }}>
+          <Field
+            label="Listing purpose"
+            name="purposeFilter"
+            value={filters.purpose}
+            onChange={(e) => updateFilter("purpose", e.target.value)}
+            options={["Any purpose", "Rent", "Buy"]}
+          />
+
+          <Field
+            label="Location"
+            name="locationFilter"
+            value={filters.location}
+            onChange={(e) => updateFilter("location", e.target.value)}
+            placeholder="City, sector or area"
+          />
+
+          <Field
+            label="Minimum budget (₹)"
+            name="minBudgetFilter"
+            type="number"
+            min="0"
+            value={filters.minBudget}
+            onChange={(e) => updateFilter("minBudget", e.target.value)}
+            placeholder="Minimum price"
+          />
+
+          <Field
+            label="Maximum budget (₹)"
+            name="maxBudgetFilter"
+            type="number"
+            min="0"
+            value={filters.maxBudget}
+            onChange={(e) => updateFilter("maxBudget", e.target.value)}
+            placeholder="Maximum price"
+          />
+
+          <Field
+            label="BHK"
+            name="bhkFilter"
+            value={filters.bhk}
+            onChange={(e) => updateFilter("bhk", e.target.value)}
+            options={["Any BHK", "1 BHK", "2 BHK", "3 BHK", "4+ BHK", "Studio"]}
+          />
+
+          <Field
+            label="Furnishing"
+            name="furnishedFilter"
+            value={filters.furnished}
+            onChange={(e) => updateFilter("furnished", e.target.value)}
+            options={["Any", "Furnished", "Semi-furnished", "Unfurnished"]}
+          />
+
+          <Field
+            label="Property type"
+            name="kindFilter"
+            value={filters.kind}
+            onChange={(e) => updateFilter("kind", e.target.value)}
+            options={["Any type", "Flat", "House", "PG", "Other"]}
+          />
+
+          <Field
+            label="Rental category"
+            name="categoryFilter"
+            value={filters.rentalCategory}
+            onChange={(e) => updateFilter("rentalCategory", e.target.value)}
+            options={["Any category", "Family", "Student"]}
+          />
+
+          <Field
+            label="Minimum bathrooms"
+            name="bathroomsFilter"
+            value={filters.bathrooms}
+            onChange={(e) => updateFilter("bathrooms", e.target.value)}
+            options={["Any", "1", "2", "3", "4"]}
+          />
+
+          <Field
+            label="Sort by"
+            name="sortFilter"
+            value={filters.sortBy}
+            onChange={(e) => updateFilter("sortBy", e.target.value)}
+            options={["newest", "price-low", "price-high", "title"]}
+          />
+        </div>
+
+        <button
+          type="button"
+          className="btn btn-light full"
+          style={{ marginTop: 16 }}
+          onClick={resetFilters}
+        >
+          Reset filters
+        </button>
+      </aside>
+      <section className="property-results" style={{ minWidth: 0 }}></section>
+      <>
+        {/* Page heading */}
+        <div className="page-heading">...</div>
+
+        {/* All/Wishlist/Compare buttons */}
+
+        {/* Add Property button */}
+
+        <div className="property-layout">
+          <aside className="property-filter-sidebar">
+            {/* All filter fields + Reset button */}
+          </aside>
+
+          <section className="property-results">
+            {/* Admin form */}
+            {/* Comparison section */}
+            {/* Property cards */}
+            {/* Empty states */}
+          </section>
+        </div>
+      </>
+
       {/* ADD PROPERTY FORM */}
       {admin && (
         <div className="content-card form-card">
@@ -1269,23 +1397,20 @@ export default function PropertiesPage({ app }) {
         ))}
       </div>
 
-      {!admin &&
-        listingMode === "wishlist" &&
-        visibleProperties.length === 0 && (
-          <div className="empty-state">
-            Your wishlist is empty or no saved properties match the current
-            filters.
-          </div>
-        )}
-
-      {!admin && listingMode === "all" && visibleProperties.length === 0 && (
+      {listingMode === "wishlist" && visibleProperties.length === 0 && (
         <div className="empty-state">
-          No matching properties found. Try changing your filters.
+          Your wishlist is empty, or none of your saved properties match.
+        </div>
+      )}
+
+      {listingMode === "all" && availableProperties.length === 0 && (
+        <div className="empty-state">
+          There are currently no available properties to show.
         </div>
       )}
 
       {admin && visibleProperties.length === 0 && (
-        <div className="empty-state">No matching properties found.</div>
+        <div className="empty-state">No properties found.</div>
       )}
     </>
   );
