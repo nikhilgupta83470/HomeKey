@@ -73,13 +73,13 @@ export default function ContactPage({ app }) {
       <div className="contact-actions">
         <a
           className="btn btn-dark"
-          href="mailto:ascendprorealty@gmail.com.com?subject=Rental%20enquiry"
+          href="mailto:ascendprorealty@gmail.com?subject=Rental%20enquiry"
         >
           <Mail size={17} /> Email the broker
         </a>
         <a
           className="btn btn-light"
-          href="https://wa.me/9999514787"
+          href="https://wa.me/919999514787"
           target="_blank"
           rel="noreferrer"
         >
