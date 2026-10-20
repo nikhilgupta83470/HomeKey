@@ -51,7 +51,7 @@ export default function AboutUsPage() {
           <div>
             <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm text-amber-300">
               <KeyRound size={16} />
-              Welcome to HomeKey
+              Welcome to ASCEND PRO REALTY
             </span>
 
             <h1 className="mt-6 text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
@@ -63,8 +63,8 @@ export default function AboutUsPage() {
 
             <p className="mt-6 max-w-xl text-base leading-8 text-slate-300 sm:text-lg">
               Finding a home should feel exciting, not overwhelming. HomeKey
-              helps you explore properties, compare your options, and take
-              the next step toward a place that feels right for you.
+              helps you explore properties, compare your options, and take the
+              next step toward a place that feels right for you.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-4">
@@ -124,14 +124,15 @@ export default function AboutUsPage() {
 
           <div className="space-y-5 text-base leading-8 text-slate-600">
             <p>
-              HomeKey is a property platform designed to make discovering your
-              next home more convenient. We bring property information and
-              housing options together to help you make a more informed choice.
+              ASCEND PRO REALTY is a property platform designed to make
+              discovering your next home more convenient. We bring property
+              information and housing options together to help you make a more
+              informed choice.
             </p>
             <p>
               Whether you are searching for a rental home or exploring a
-              property to buy, our goal is to make the journey clearer,
-              simpler, and more focused on your needs and budget.
+              property to buy, our goal is to make the journey clearer, simpler,
+              and more focused on your needs and budget.
             </p>
           </div>
         </div>
@@ -189,7 +190,7 @@ export default function AboutUsPage() {
       <section className="mx-auto max-w-7xl px-6 py-20 md:px-10 md:py-24">
         <div className="mx-auto mb-12 max-w-2xl text-center">
           <span className="text-sm font-bold uppercase tracking-[0.2em] text-amber-600">
-            The HomeKey Difference
+            The ASCEND PRO REALTY Difference
           </span>
           <h2 className="mt-4 text-3xl font-bold text-slate-900 sm:text-4xl">
             A better way to explore properties
