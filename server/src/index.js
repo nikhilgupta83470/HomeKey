@@ -29,9 +29,16 @@ import { notifyAdmin } from "./notify.js";
 const app = express();
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
+const allowedOrigins = [
+  "https://home-key-five.vercel.app",
+  "https://ascend-pro-realty.vercel.app",
+  "http://localhost:5173",
+];
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: allowedOrigins,
+    credentials: true,
   }),
 );
 
